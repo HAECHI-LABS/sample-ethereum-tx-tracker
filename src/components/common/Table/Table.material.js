@@ -9,8 +9,7 @@ import TablePagination from '@material-ui/core/TablePagination';
 import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import TableHead from '@material-ui/core/TableHead';
-import EventRows from './EventRows';
-import { separateMessageFromStack } from '../../../../node_modules/jest-message-util/build/index';
+import TransactionRows from './TransactionRows';
 
 function TableHeaderMaterial({ columns }) {
   return (
@@ -30,7 +29,7 @@ function TableBodyMaterial({ data, columns, page, rowsPerPage }) {
   const emptyRows = rowsPerPage - Math.min(rowsPerPage, data.length - page * rowsPerPage);
   return (
     <TableBody>
-      <EventRows events={data.events} page={page} rowsPerPage={rowsPerPage} />
+      <TransactionRows transactions={data.transactions} page={page} rowsPerPage={rowsPerPage} />
       {/*
               When last page item is less then items per page, then add space below them
             */}

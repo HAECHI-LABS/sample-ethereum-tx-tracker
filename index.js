@@ -6,6 +6,9 @@ const Henesis = require('@haechi-labs/henesis-sdk-js').default;
 const { Sender } = require('./helper/Sender');
 
 const transactions = {};
+
+const CLIENT_ID="a481485a958f1b82ac310ec4eea27943";
+const PRIVATE_KEY='D2864C6ECEA17B8CC70C02214FF0785AE5B011FA071C642F800AF4D02C9E457A';
 const henesis = new Henesis("a481485a958f1b82ac310ec4eea27943");
 
 app.use(cors({
@@ -16,18 +19,18 @@ app.use(cors({
 app.use(express.static(path.join(__dirname, 'build')));
 
 app.get('/api/tx', function(req,res) {
-    res.json(transactions); 
+    res.json( Object.entries(transactions).map( item => { return { ...item[1], transactionHash:item[0]} } ) ); 
 });
 
 app.post('/api/tx', async function(req,res) {
-  const sender = new Sender('D2864C6ECEA17B8CC70C02214FF0785AE5B011FA071C642F800AF4D02C9E457A');
+  const sender = new Sender(PRIVATE_KEY);
   const nonce = await sender.getNonce();
   const txHash = await sender.send(nonce);
   henesis.trackTransaction(txHash, {
-    timeout: 6000, // If the transaction is not mined until the timeout, a pending message will be sent.
-    confirmation: 5 // When a transaction is confirmed up to the corresponding block confirmation, a confirmation message will be sent.
+    timeout: 6000, 
+    confirmation: 5 
   });
-  transactions[txHash] = { status: "init" };
+  transactions[txHash] = { status: "registered" };
   res.json(transactions); 
 });
 
@@ -44,25 +47,23 @@ async function trackTx () {
   );
 
   subscription.on("message", async (message) => {
-    console.log('message',message)
+    console.log(message)
     switch(message.data.type) {
       case 'pending' : 
         transactions[message.data.result.transactionHash] = { status: 'pending'}
         break;
       case 'receipt' : 
         transactions[message.data.result.transactionHash] = { status: 'receipt'}
-        // trackTransaction 함수 호출시 설정한 confirmation이 지나고 호출 됩니다.
         break;
       case 'confirmation' : 
-        transactions[message.data.result.transactionHash] = { status: 'confirmation'}
-        // transaction이 confirm 된 순간에 호출 됩니다.
+        console.log('message.data',message.data)
+        transactions[message.data.result.transactionHash] = { status: 'confirmation', blockNumber: message.data.result.blockNumber }
         break;
     }
     message.ack();
   });
   subscription.on("error", async (error) => {
     console.log('err',error)
-    // error handling	
   });
 }
 

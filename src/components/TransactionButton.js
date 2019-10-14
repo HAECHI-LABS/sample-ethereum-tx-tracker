@@ -1,6 +1,7 @@
-import Button from './common/Button';
-import transactions from '../lib/api/transactions';
+import React from 'react';
+import Button from '@material-ui/core/Button';
+import {generateTransaction} from '../lib/api/transactions';
 
 export default () => {
-    return <Button onClick={transactions.generateTransaction()} />
+    return <Button onClick={async () => { await generateTransaction() }}> Generate Transaction!</Button>
 }
