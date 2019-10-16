@@ -1,4 +1,4 @@
-const Tx = require('ethereumjs-tx');
+const { Transaction:Tx } = require('ethereumjs-tx');
 const Web3 = require('web3');
 
 class Sender {
