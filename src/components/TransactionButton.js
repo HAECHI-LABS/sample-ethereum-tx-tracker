@@ -12,5 +12,5 @@ const useStyles = makeStyles(theme => ({
   
 export default () => {
     const classes = useStyles();
-    return <Button className={classes.root} variant="contained" color="primary" onClick={async () => { await generateTransaction() }}> Generate Transaction!</Button>
+    return <Button className={classes.root} variant="contained" color="primary" onClick={async () => { await generateTransaction() }}> Generate a Transaction!</Button>
 }
