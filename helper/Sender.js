@@ -3,9 +3,9 @@ const Web3 = require('web3');
 
 class Sender {
 
-    constructor(privateKey) {
+    constructor(privateKey, nodeEndpoint) {
         this.privateKey = privateKey;
-        this.web3 = new Web3('https://ropsten.infura.io/v3/4feb1e5949df453fa6326d4328fe5b80');
+        this.web3 = new Web3(nodeEndpoint);
         this.account = this.web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
     }
 

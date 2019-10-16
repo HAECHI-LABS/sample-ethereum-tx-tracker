@@ -32,6 +32,7 @@ export default class IntegrationList extends React.Component {
             {header: 'TransactionHash', accessor: 'transactionhash'},
             {header: 'Status', accessor: 'status'},
             {header: 'BlockNumber', accessor: 'blocknumber'},
+            {header: 'GasUsed', accessor: 'gasused'}
             ]}
             data={ {
               transactions: this.state.transactions

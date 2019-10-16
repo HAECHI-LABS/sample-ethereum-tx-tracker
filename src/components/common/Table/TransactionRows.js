@@ -5,7 +5,11 @@ import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 
 function getEtherscanUrl(tx) {
-    return `https://etherscan.io/tx/${tx.transactionHash}`
+    return `https://ropsten.etherscan.io/tx/${tx.transactionHash}`
+}
+
+function sliceTx(txHash) {
+    return `${txHash.slice(0,8)}...`;
 }
 
 export default function ({transactions,page,rowsPerPage}) {
@@ -17,16 +21,17 @@ export default function ({transactions,page,rowsPerPage}) {
                     href={getEtherscanUrl(tx)}
                     target="_blank"
                 >
-                    {tx.transactionHash}
+                    {sliceTx(tx.transactionHash)}
                 </Button>
             </TableCell>
             <TableCell>
                 {tx.status}
             </TableCell>
-            <TableCell> 
-                <Typography>
-                { tx.status === 'confirmation' ? tx.blockNumber: ""}
-                </Typography>
+            <TableCell>
+                { tx.blockNumber? tx.blockNumber : ""}
+            </TableCell>
+            <TableCell>
+                { tx.gasUsed? tx.gasUsed : ""}
             </TableCell>
         </TableRow>
         )
