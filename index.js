@@ -28,7 +28,7 @@ app.post('/api/tx', async function(req,res) {
   //start tracking transaction
   henesis.trackTransaction(txHash, {
     timeout: 30*1000, 
-    confirmation: 5 
+    confirmation: 6
   });
   transactions[txHash] = { status: "registered" };
   res.json(transactions); 
