@@ -1,9 +1,9 @@
 {
-  "name": "henesis-user-dashboard",
+  "name": "henesis-tx-tracker-sample",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@haechi-labs/henesis-sdk-js": "^1.0.0-beta.5",
+    "@haechi-labs/henesis-sdk-js": "^1.0.0-beta.9",
     "@material-ui/core": "^4.5.0",
     "@material-ui/icons": "^4.4.3",
     "@material-ui/styles": "^4.5.0",
