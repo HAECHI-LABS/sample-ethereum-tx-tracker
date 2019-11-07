@@ -3,79 +3,159 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const app = express();
-const { TransactionTracker } = require('@haechi-labs/henesis-sdk-js');
-const { Sender } = require('./helper/Sender');
+const {TransactionTracker} = require('@haechi-labs/henesis-sdk-js');
+const {TransactionStore} = require('./store/TransactionStore');
+const {Sender} = require('./helper/Sender');
+const {Transaction, Status} = require('./types/index');
 
-const transactions = {};
+const {CLIENT_ID, PRIVATE_KEY, NODE_ENDPOINT, PLATFORM, NETWORK} = process.env;
+const TIMEOUT = 10000;
+const CONFIRMATION = 6;
+const GAS_PRICE = 1000000000;
 
-const { CLIENT_ID, PRIVATE_KEY, NODE_ENDPOINT } = process.env;
 const tracker = new TransactionTracker(CLIENT_ID, {
-  platform: 'ethereum',
-  network: 'ropsten',
+  platform: PLATFORM,
+  network: NETWORK
 });
+const sender = new Sender(PRIVATE_KEY, NODE_ENDPOINT);
+const transactionStore = new TransactionStore();
 
 app.use(express.static(path.join(__dirname, 'build')));
 
-app.get('/api/tx', function(req,res) {
-    res.json( Object.entries(transactions).map( item => { return { ...item[1], transactionHash:item[0]} } ) );
+app.get('/api/tx', function (req, res) {
+  res.json(transactionStore.findAll());
 });
 
-app.post('/api/tx', async function(req,res) {
-
+app.post('/api/tx', async function (req, res) {
   //Generate Transactions
-  const sender = new Sender(PRIVATE_KEY, NODE_ENDPOINT);
   const nonce = await sender.getNonce();
-  const txHash = await sender.send(nonce);
-  console.log(`transaction generated. txHash:${txHash}`);
+  const transactionHash = await sender.send(nonce, GAS_PRICE);
+  console.log(`transaction generated. txHash:${transactionHash}`);
 
   //start tracking transaction
-  tracker.trackTransaction(txHash, {
-    timeout: 30*1000,
-    confirmation: 6
+  await tracker.trackTransaction(transactionHash, {
+    timeout: TIMEOUT,
+    confirmation: CONFIRMATION
   });
-  transactions[txHash] = { status: "registered" };
-  res.json(transactions);
+
+  const transaction = new Transaction(
+    transactionHash,
+    nonce,
+    GAS_PRICE
+  );
+  transactionStore.save(transaction);
+  await res.json(transaction);
 });
 
-app.get('/*', function(req, res) {
+app.get('/*', function (req, res) {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-async function trackTx () {
+async function trackTx() {
   const subscription = await tracker.subscribe(
     "transaction",
-      {
-        subscriptionId: "your-subscription-id",
-        ackTimeout: 30 * 1000 // default is 10 * 1000 (ms)
-      }
+    {
+      subscriptionId: "your-subscription-id",
+      ackTimeout: 30 * 1000 // default is 10 * 1000 (ms)
+    }
   );
 
   subscription.on("message", async (message) => {
-    console.log(`now transaction status is: ${message.data.type}`)
-    switch(message.data.type) {
+    const transactionHash = message.data.result.transactionHash;
+    let transaction = {};
+    console.log(`[MESSAGE] transaction ${transactionHash} status is: ${message.data.type}`)
+    switch (message.data.type) {
       case 'pending' :
-        transactions[message.data.result.transactionHash] = { status: 'pending'}
+        transaction = transactionStore.findByHash(transactionHash);
+        if (transaction.status == undefined) {
+          transaction.status = Status.pending;
+        }
+        if (isNeededResolve(transaction)) {
+          const newTransaction = await retry(transaction);
+          transactionStore.save(newTransaction);
+        }
         break;
       case 'receipt' :
-        console.log('message.data.result',message.data.result)
-        transactions[message.data.result.transactionHash] = { ...message.data.result, status: 'receipt' }
+        transaction = transactionStore.findByHash(transactionHash);
+        checkResolvedTransaction(transaction);
+        transaction.status = Status.receipt;
+        transaction.data = {...message.data.result};
+        transactionStore.save(transaction);
         break;
       case 'confirmation' :
-        console.log('message.data.result',message.data.result)
-        transactions[message.data.result.transactionHash] = {...message.data.result, status: 'confirmation' }
+        transaction = transactionStore.findByHash(transactionHash);
+        transaction.status = Status.confirmation;
+        transaction.data = {...message.data.result};
+        transactionStore.save(transaction);
         break;
     }
     message.ack();
   });
 
   subscription.on("error", async (error) => {
-    console.log('err',error);
+    console.log('err', error);
   });
 }
 
-async function main () {
-    trackTx();
-    app.listen(3000);
+function gasPriceUp(gasPrice, up) {
+  let result = Number(gasPrice);
+  result += Number(up);
+  return result.toString();
+}
+
+function isNeededResolve(transaction) {
+  const transactions = transactionStore.findAll();
+
+  for (let tx of transactions) {
+    if (tx.nonce == transaction.nonce && (tx.status == Status.receipt || tx.status == Status.confirmation)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function retry(transaction) {
+  const nonce = transaction.nonce;
+  const gasPrice = transaction.gasPrice;
+  const newGasPrice = gasPriceUp(gasPrice, '1000000000');
+  const newTxHash = await sender.send(
+    nonce,
+    newGasPrice
+  );
+
+  console.log(
+    "[PENDING] try send tx with same nonce, higher gas price\n",
+    "hash : ", newTxHash,
+    "nonce : ", nonce,
+    "gasPrice : ", newGasPrice
+  );
+  await tracker.trackTransaction(newTxHash, {
+    timeout: Number(TIMEOUT),
+    confirmation: Number(CONFIRMATION)
+  });
+
+  const newTransaction = new Transaction(
+    newTxHash,
+    nonce,
+    newGasPrice
+  );
+
+  return newTransaction;
+}
+
+function checkResolvedTransaction(transaction) {
+  const transactions = transactionStore.findAll();
+
+  transactions.forEach((tx) => {
+    if (tx.nonce == transaction.nonce && tx.transactionHash != transaction.transactionHash) {
+      tx.status = Status.replaced;
+    }
+  });
+}
+
+async function main() {
+  trackTx();
+  app.listen(3000);
 }
 
 main();

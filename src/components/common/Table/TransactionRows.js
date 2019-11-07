@@ -28,10 +28,13 @@ export default function ({transactions,page,rowsPerPage}) {
                 {tx.status}
             </TableCell>
             <TableCell>
-                { tx.blockNumber? tx.blockNumber : ""}
+                { tx.nonce? tx.nonce : ""}
             </TableCell>
             <TableCell>
-                { tx.gasUsed? tx.gasUsed : ""}
+                { tx.data? tx.data.blockNumber : ""}
+            </TableCell>
+            <TableCell>
+                { tx.data? tx.data.gasUsed : ""}
             </TableCell>
         </TableRow>
         )

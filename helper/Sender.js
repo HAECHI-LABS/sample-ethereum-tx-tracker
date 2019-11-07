@@ -10,13 +10,13 @@ class Sender {
     }
 
     async getNonce() {
-        return await this.web3.eth.getTransactionCount(this.account.address);
+        return await this.web3.eth.getTransactionCount(this.account.address, "pending");
     }
 
-    async send(nonce) {
+    async send(nonce, gasPrice) {
         let rawTx = {
             nonce: nonce,
-            gasPrice: this.web3.utils.toHex("30000000000"),
+            gasPrice: this.web3.utils.toHex(gasPrice),
             gasLimit: this.web3.utils.toHex('42000'),
             from: this.account.address,
             to: this.account.address,

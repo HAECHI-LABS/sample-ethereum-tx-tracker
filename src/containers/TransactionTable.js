@@ -31,6 +31,7 @@ export default class IntegrationList extends React.Component {
             columns={[
             {header: 'TransactionHash', accessor: 'transactionhash'},
             {header: 'Status', accessor: 'status'},
+            {header: 'Nonce', accessor: 'Nonce'},
             {header: 'BlockNumber', accessor: 'blocknumber'},
             {header: 'GasUsed', accessor: 'gasused'}
             ]}
