@@ -9,7 +9,7 @@ const {Sender} = require('./helper/Sender');
 const {Transaction, Status} = require('./types/index');
 
 const {CLIENT_ID, PRIVATE_KEY, NODE_ENDPOINT, PLATFORM, NETWORK} = process.env;
-const TIMEOUT = 10000;
+const TIMEOUT = 10*1000;
 const CONFIRMATION = 6;
 const GAS_PRICE = 1000000000;
 
