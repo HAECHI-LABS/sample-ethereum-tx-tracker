@@ -10,7 +10,7 @@ class Sender {
     }
 
     async getNonce() {
-        return await this.web3.eth.getTransactionCount(this.account.address, "pending");
+        return await this.web3.eth.getTransactionCount(this.account.address, 'pending');
     }
 
     async send(nonce, gasPrice) {
@@ -31,8 +31,12 @@ class Sender {
         return new Promise((resolve, reject) => {
             const hexSerializedTx = '0x' + serializedTx.toString('hex');
             this.web3.eth.sendSignedTransaction(hexSerializedTx, async (error, txHash) => {
-                const hash = await this.web3.utils.sha3(hexSerializedTx);
-                return resolve(hash);
+                if(error) {
+                    console.log(error.message);
+                } else{
+                    const hash = await this.web3.utils.sha3(hexSerializedTx);
+                    return resolve(hash);
+                }
             });
         });
     }

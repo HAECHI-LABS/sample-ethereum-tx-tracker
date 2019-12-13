@@ -53,14 +53,14 @@ app.get('/*', function (req, res) {
 
 async function trackTx() {
   const subscription = await tracker.subscribe(
-    "transaction",
+    'transaction',
     {
-      subscriptionId: "your-subscription-id",
+      subscriptionId: 'your-subscription-id',
       ackTimeout: 30 * 1000 // default is 10 * 1000 (ms)
     }
   );
 
-  subscription.on("message", async (message) => {
+  subscription.on('message', async (message) => {
     const transactionHash = message.data.result.transactionHash;
     let transaction = {};
     console.log(`[MESSAGE] transaction ${transactionHash} status is: ${message.data.type}`)
@@ -92,7 +92,7 @@ async function trackTx() {
     message.ack();
   });
 
-  subscription.on("error", async (error) => {
+  subscription.on('error', async (error) => {
     console.log('err', error);
   });
 }
@@ -124,10 +124,10 @@ async function retry(transaction) {
   );
 
   console.log(
-    "[PENDING] try send tx with same nonce, higher gas price\n",
-    "hash : ", newTxHash,
-    "nonce : ", nonce,
-    "gasPrice : ", newGasPrice
+    '[PENDING] try send tx with same nonce, higher gas price\n',
+    'hash : ', newTxHash,
+    'nonce : ', nonce,
+    'gasPrice : ', newGasPrice
   );
   await tracker.trackTransaction(newTxHash, {
     timeout: Number(TIMEOUT),
