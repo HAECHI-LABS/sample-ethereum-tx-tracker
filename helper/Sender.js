@@ -20,7 +20,7 @@ class Sender {
             gasLimit: this.web3.utils.toHex('42000'),
             from: this.account.address,
             to: this.account.address,
-            value: '0x1',
+            value: '0x0',
             data: '0x0'
         };
         const tx = new Tx(rawTx, {chain: 'ropsten'});
@@ -33,7 +33,7 @@ class Sender {
             this.web3.eth.sendSignedTransaction(hexSerializedTx, async (error, txHash) => {
                 if(error) {
                     console.log(error.message);
-                } else{
+                } else {
                     const hash = await this.web3.utils.sha3(hexSerializedTx);
                     return resolve(hash);
                 }
