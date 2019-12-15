@@ -154,7 +154,7 @@ function checkResolvedTransaction(transaction) {
 }
 
 async function main() {
-  trackTx();
+  await trackTx();
   app.listen(3000);
 }
 
