@@ -9,8 +9,7 @@ const GAS_PRICE = 1000000000;
 
 const tracker = new TransactionTracker(CLIENT_ID, {
   platform: PLATFORM,
-  network: NETWORK,
-  url: 'http://localhost:8085'
+  network: NETWORK
 });
 
 const sender = new Sender(PRIVATE_KEY, NODE_ENDPOINT);
