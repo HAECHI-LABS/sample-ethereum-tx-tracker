@@ -63,31 +63,31 @@ async function trackTx() {
   subscription.on('message', async (message) => {
     const transactionHash = message.data.result.transactionHash;
     let transaction = {};
-    console.log(`[MESSAGE] transaction ${transactionHash} status is: ${message.data.type}`)
-    switch (message.data.type) {
-      case 'pending' :
-        transaction = transactionStore.findByHash(transactionHash);
-        if (transaction.status == undefined) {
-          transaction.status = Status.pending;
-        }
-        if (isNeededResolve(transaction)) {
-          const newTransaction = await retry(transaction);
-          transactionStore.save(newTransaction);
-        }
-        break;
-      case 'receipt' :
-        transaction = transactionStore.findByHash(transactionHash);
-        checkResolvedTransaction(transaction);
-        transaction.status = Status.receipt;
-        transaction.data = {...message.data.result};
-        transactionStore.save(transaction);
-        break;
-      case 'confirmation' :
-        transaction = transactionStore.findByHash(transactionHash);
-        transaction.status = Status.confirmation;
-        transaction.data = {...message.data.result};
-        transactionStore.save(transaction);
-        break;
+    console.log(`[MESSAGE] transaction ${transactionHash} status is: ${message.data.type}`);
+    transaction = transactionStore.findByHash(transactionHash);
+    if (transaction !== undefined) {
+      switch (message.data.type) {
+        case 'pending' :
+          if (transaction.status === undefined) {
+            transaction.status = Status.pending;
+          }
+          if (isNeededResolve(transaction)) {
+            const newTransaction = await retry(transaction);
+            transactionStore.save(newTransaction);
+          }
+          break;
+        case 'receipt' :
+          checkResolvedTransaction(transaction);
+          transaction.status = Status.receipt;
+          transaction.data = {...message.data.result};
+          transactionStore.save(transaction);
+          break;
+        case 'confirmation' :
+          transaction.status = Status.confirmation;
+          transaction.data = {...message.data.result};
+          transactionStore.save(transaction);
+          break;
+      }
     }
     message.ack();
   });
