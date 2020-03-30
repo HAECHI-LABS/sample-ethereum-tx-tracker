@@ -1,5 +1,5 @@
 {
-  "name": "henesis-sample-ethereum-tx-tracker",
+  "name": "henesis-sample-ethereum-tracking-transaction",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

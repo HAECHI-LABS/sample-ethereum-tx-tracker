@@ -5,7 +5,7 @@ const cors = require('cors');
 const app = express();
 const {HenesisWeb3} = require('../henesis-sdk-js/packages/henesis-sdk-js');
 const {TransactionStore} = require('./store/TransactionStore');
-const {TransactionGenerator} = require('./helper/TransactionGenerator');
+const {TransactionHelper} = require('./helper/TransactionHelper');
 const {Transaction, Status} = require('./types/index');
 
 const {PRIVATE_KEY, TN_ENDPOINT} = process.env;
@@ -14,8 +14,7 @@ const CONFIRMATION = 6;
 const GAS_PRICE = 1000000000;
 
 const web3 = new HenesisWeb3(TN_ENDPOINT);
-web3.eth.accounts.wallet.add('0x' + PRIVATE_KEY);
-const transactionGenerator = new TransactionGenerator(web3);
+const transactionHelper = new TransactionHelper(web3, PRIVATE_KEY);
 const transactionStore = new TransactionStore();
 
 app.use(express.static(path.join(__dirname, 'build')));
@@ -25,15 +24,12 @@ app.get('/api/tx', function (req, res) {
 });
 
 app.post('/api/tx', async function (req, res) {
-  //Generate Transactions
-  const address = web3.eth.accounts.wallet[0].address;
-  const nonce = await web3.eth.getTransactionCount(address, 'pending');
-  const signedTransaction = await transactionGenerator.getDefaultSignedTransaction(nonce, GAS_PRICE);
+  const nonce = await transactionHelper.getNonce();
+  const signedTransaction = await transactionHelper.getDefaultSignedTransaction(nonce, GAS_PRICE);
   const hash = await web3.utils.sha3(signedTransaction);
 
   console.log(`send transaction ${hash} with nonce ${nonce}`);
 
-  //start tracking transaction
   web3.eth.sendSignedTransaction(signedTransaction, {
     timeout: TIMEOUT, // default is 30 * 1000
     confirmation: CONFIRMATION // default is 6
@@ -123,7 +119,7 @@ async function retry(transaction) {
   const nonce = transaction.nonce;
   const gasPrice = transaction.gasPrice;
   const newGasPrice = gasPriceUp(gasPrice, '1000000000');
-  const signedTransaction = await transactionGenerator.getDefaultSignedTransaction(nonce, newGasPrice);
+  const signedTransaction = await transactionHelper.getDefaultSignedTransaction(nonce, newGasPrice);
   const newTxHash = await web3.utils.sha3(signedTransaction);
 
   console.log(
