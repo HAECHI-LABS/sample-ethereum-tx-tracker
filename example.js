@@ -3,21 +3,19 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const app = express();
-const {TransactionTracker} = require('@haechi-labs/henesis-sdk-js');
+const {HenesisWeb3} = require('../henesis-sdk-js/packages/henesis-sdk-js');
 const {TransactionStore} = require('./store/TransactionStore');
-const {Sender} = require('./helper/Sender');
+const {TransactionGenerator} = require('./helper/TransactionGenerator');
 const {Transaction, Status} = require('./types/index');
 
-const {CLIENT_ID, PRIVATE_KEY, NODE_ENDPOINT, PLATFORM, NETWORK} = process.env;
-const TIMEOUT = 10*1000;
+const {PRIVATE_KEY, TN_ENDPOINT} = process.env;
+const TIMEOUT = 10 * 1000;
 const CONFIRMATION = 6;
 const GAS_PRICE = 1000000000;
 
-const tracker = new TransactionTracker(CLIENT_ID, {
-  platform: PLATFORM,
-  network: NETWORK
-});
-const sender = new Sender(PRIVATE_KEY, NODE_ENDPOINT);
+const web3 = new HenesisWeb3(TN_ENDPOINT);
+web3.eth.accounts.wallet.add('0x' + PRIVATE_KEY);
+const transactionGenerator = new TransactionGenerator(web3);
 const transactionStore = new TransactionStore();
 
 app.use(express.static(path.join(__dirname, 'build')));
@@ -28,21 +26,31 @@ app.get('/api/tx', function (req, res) {
 
 app.post('/api/tx', async function (req, res) {
   //Generate Transactions
-  const nonce = await sender.getNonce();
-  const transactionHash = await sender.send(nonce, GAS_PRICE);
-  console.log(`transaction generated. txHash:${transactionHash}`);
+  const address = web3.eth.accounts.wallet[0].address;
+  const nonce = await web3.eth.getTransactionCount(address, 'pending');
+  const signedTransaction = await transactionGenerator.getDefaultSignedTransaction(nonce, GAS_PRICE);
+  const hash = await web3.utils.sha3(signedTransaction);
+
+  console.log(`send transaction ${hash} with nonce ${nonce}`);
 
   //start tracking transaction
-  await tracker.trackTransaction(transactionHash, {
-    timeout: TIMEOUT,
-    confirmation: CONFIRMATION
+  web3.eth.sendSignedTransaction(signedTransaction, {
+    timeout: TIMEOUT, // default is 30 * 1000
+    confirmation: CONFIRMATION // default is 6
   });
 
+  /*
+  you can use like below with default tracking option
+
+  web3.eth.sendSignedTransaction(signedTransaction);
+ */
+
   const transaction = new Transaction(
-    transactionHash,
+    hash,
     nonce,
     GAS_PRICE
   );
+
   transactionStore.save(transaction);
   await res.json(transaction);
 });
@@ -52,13 +60,10 @@ app.get('/*', function (req, res) {
 });
 
 async function trackTx() {
-  const subscription = await tracker.subscribe(
-    'transaction',
-    {
-      subscriptionId: 'your-subscription-id',
-      ackTimeout: 30 * 1000 // default is 10 * 1000 (ms)
-    }
-  );
+  const subscription = await web3.eth.subscribe('transaction', {
+    subscriptionId: 'your-subscription-id',
+    ackTimeout: 30 * 1000 // default is 10 * 1000 (ms)
+  });
 
   subscription.on('message', async (message) => {
     const transactionHash = message.data.result.transactionHash;
@@ -118,10 +123,8 @@ async function retry(transaction) {
   const nonce = transaction.nonce;
   const gasPrice = transaction.gasPrice;
   const newGasPrice = gasPriceUp(gasPrice, '1000000000');
-  const newTxHash = await sender.send(
-    nonce,
-    newGasPrice
-  );
+  const signedTransaction = await transactionGenerator.getDefaultSignedTransaction(nonce, newGasPrice);
+  const newTxHash = await web3.utils.sha3(signedTransaction);
 
   console.log(
     '[PENDING] try send tx with same nonce, higher gas price\n',
@@ -129,9 +132,10 @@ async function retry(transaction) {
     'nonce : ', nonce,
     'gasPrice : ', newGasPrice
   );
-  await tracker.trackTransaction(newTxHash, {
-    timeout: Number(TIMEOUT),
-    confirmation: Number(CONFIRMATION)
+
+  web3.eth.sendSignedTransaction(signedTransaction, {
+    timeout: TIMEOUT, // default is 30 * 1000
+    confirmation: CONFIRMATION // default is 6
   });
 
   const newTransaction = new Transaction(
