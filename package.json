@@ -13,7 +13,7 @@
     "dotenv": "^8.1.0",
     "ethereumjs-tx": "^2.1.1",
     "express": "^4.17.1",
-    "immer": "^4.0.0",
+    "immer": "^8.0.1",
     "json-server": "^0.15.1",
     "prop-types": "^15.7.2",
     "qs": "^6.8.0",
